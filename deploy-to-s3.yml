@@ -1,0 +1,63 @@
+name: cdk deploy DEVELOP
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  tvplum_web_deploy_develop:
+    runs-on: ubuntu-18.04
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+
+      # - name: Install Firebase CLI
+      #   run: npm install -g firebase-tools
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: DEV Build Code
+        run: |
+          npm run build:develop
+
+      - name: Setup awscli v2
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
+      - name: Identity Check
+        run: aws sts get-caller-identity
+        env:
+          AWS_DEFAULT_REGION: 'ap-northeast-1'
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_STORAGE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_STORAGE_SECRET_KEY }}
+
+      - name: Upload S3
+        run: |
+          aws s3 sync --exact-timestamps --delete build/ s3://$AWS_STORAGE_BUCKET
+        env:
+          AWS_DEFAULT_REGION: 'ap-northeast-1'
+          AWS_STORAGE_BUCKET: ${{ secrets.DEV_STORAGE_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_STORAGE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_STORAGE_SECRET_KEY }}
+
+      - name: Create Invalidation
+        run: aws cloudfront create-invalidation --distribution-id $DISTRIBUTION --paths '/*'
+        env:
+          AWS_DEFAULT_REGION: 'ap-northeast-1'
+          DISTRIBUTION: ${{ secrets.DEV_DISTRIBUTION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_STORAGE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_STORAGE_SECRET_KEY }}
