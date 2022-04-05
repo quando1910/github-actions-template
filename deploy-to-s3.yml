@@ -3,10 +3,10 @@ name: cdk deploy DEVELOP
 on:
   push:
     branches:
-      - develop
+      - develop # should rename this branch to your project's situation.
 
 jobs:
-  tvplum_web_deploy_develop:
+  develop_deployment:
     runs-on: ubuntu-18.04
 
     strategy:
@@ -22,15 +22,13 @@ jobs:
         with:
           node-version: '14.x'
 
-      # - name: Install Firebase CLI
-      #   run: npm install -g firebase-tools
-
       - name: Install Dependencies
         run: npm install
 
+      # should create the script "build" in package.json.
       - name: DEV Build Code
         run: |
-          npm run build:develop
+          npm run build
 
       - name: Setup awscli v2
         run: |
@@ -38,26 +36,27 @@ jobs:
           unzip awscliv2.zip
           sudo ./aws/install
 
+      # should create those secrets `DISTRIBUTION`, `STORAGE_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` in github repository before run this action.
       - name: Identity Check
         run: aws sts get-caller-identity
         env:
           AWS_DEFAULT_REGION: 'ap-northeast-1'
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_STORAGE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_STORAGE_SECRET_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Upload S3
         run: |
           aws s3 sync --exact-timestamps --delete build/ s3://$AWS_STORAGE_BUCKET
         env:
           AWS_DEFAULT_REGION: 'ap-northeast-1'
-          AWS_STORAGE_BUCKET: ${{ secrets.DEV_STORAGE_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_STORAGE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_STORAGE_SECRET_KEY }}
+          AWS_STORAGE_BUCKET: ${{ secrets.STORAGE_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Create Invalidation
         run: aws cloudfront create-invalidation --distribution-id $DISTRIBUTION --paths '/*'
         env:
           AWS_DEFAULT_REGION: 'ap-northeast-1'
-          DISTRIBUTION: ${{ secrets.DEV_DISTRIBUTION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_STORAGE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_STORAGE_SECRET_KEY }}
+          DISTRIBUTION: ${{ secrets.DISTRIBUTION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

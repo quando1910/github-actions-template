@@ -3,7 +3,7 @@ name: Check lint
 on:
   pull_request:
     branches:
-      - 'develop'
+      - develop # should rename this branch to your project's situation.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,10 +25,12 @@ jobs:
         run: |
           npm install
       
+      # should create the script "lint" in package.json. `"lint": "eslint . --ext .ts"`
       - name: Check lint
         run: |
-          npm run lint
+          npm run lint 
 
+      # should create the script "build" in package.json.
       - name: Check build
         run: |
-          npm run build:develop
+          npm run build
